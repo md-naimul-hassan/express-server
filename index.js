@@ -21,6 +21,8 @@ app.get("/api", (req, res) => {
  
 const totalCommits = 5;
 
+const { spawnSync } = require('child_process');
+
 // Starting date
 let date = new Date();
 
@@ -41,16 +43,26 @@ for (let i = 1; i <= totalCommits; i++) {
 
   try {
     // Stage all changes
-    execSync('git add .');
+    spawnSync('git', ['add', '.']);
 
-    // Set the GIT_COMMITTER_DATE and GIT_AUTHOR_DATE and create the commit
-    execSync(
-      `GIT_COMMITTER_DATE="${formattedDate}" GIT_AUTHOR_DATE="${formattedDate}" git commit -m "${message}"`
-    );
+    // Set up environment variables for the commit date
+    const env = {
+      ...process.env,
+      GIT_COMMITTER_DATE: formattedDate,
+      GIT_AUTHOR_DATE: formattedDate,
+    };
 
-    console.log(`Created commit #${i} on ${formattedDate}`);
+    // Commit with the custom environment
+    const commit = spawnSync('git', ['commit', '-m', message], { env });
+
+    if (commit.error) {
+      console.error(`Failed at commit #${i}:`, commit.error.message);
+      break;
+    } else {
+      console.log(`Created commit #${i} on ${formattedDate}`);
+    }
   } catch (error) {
-    console.error(`Failed at commit #${i}:`, error.message);
+    console.error(`Error at commit #${i}:`, error.message);
     break;
   }
 }
